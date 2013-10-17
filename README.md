@@ -1,7 +1,7 @@
 ExtendedJSONParser
 ==================
 
-Json parser very easy to use
+JSON parser very easy to use
 
 An example:
 -----------
@@ -70,7 +70,7 @@ import ExtendedJSONParser.ExtendedJSONParser;
 
 public class Test {
 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws Exception{
 		String json=
 		"["
 			+ "{"
@@ -87,10 +87,7 @@ public class Test {
 				+ "'ruedas':[{'tamaño':'19'},{'tamaño':'19'},{'tamaño':'19'},{'tamaño':'19'}]"
 		+ "}]";			
 		
-		try {
-			System.out.println(Arrays.toString(ExtendedJSONParser.GetObject(json, Vehiculo[].class)));
-		} catch (Exception e) {
-			System.out.println(e.toString());
-		}		
+		Vehiculo[] vehiculos=ExtendedJSONParser.GetObject(json, Vehiculo[].class);
+		System.out.println(Arrays.toString(vehiculos));
 	}
 }
