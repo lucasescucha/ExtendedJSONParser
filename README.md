@@ -12,8 +12,6 @@ package ExtendedJSONParser.Test;
 
 import java.util.Arrays;
 
-import ExtendedJSONParser.JSONElements;
-
 public class Vehiculo {
 
 	private String marca;
@@ -21,18 +19,20 @@ public class Vehiculo {
 	private boolean descapotable;
 	private Rueda[] ruedas;
 	
-	@JSONElements(names="marca,modelo,descapotable,ruedas")
-	public Vehiculo(String marca,int modelo,boolean descapotable,Rueda[] ruedas)
-	{
-		this.marca=marca;
-		this.modelo=modelo;
-		this.descapotable=descapotable;
-		this.ruedas=ruedas;
-	}
+	public Vehiculo(){}
 	
 	@Override
 	public String toString() {
 		return marca + " " + modelo + " " + descapotable + " " + Arrays.toString(ruedas);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		Vehiculo vehiculo=(Vehiculo)obj;
+		return vehiculo.marca.equals(this.marca) &&
+				vehiculo.modelo==this.modelo &&
+				vehiculo.descapotable==this.descapotable &&
+				Arrays.equals(vehiculo.ruedas, this.ruedas);
 	}
 }
 
@@ -41,21 +41,20 @@ public class Vehiculo {
 ```java
 package ExtendedJSONParser.Test;
 
-import ExtendedJSONParser.JSONElements;
-
 public class Rueda {
 
-	private double tamaño;
+	private int tamaño;
 	
-	@JSONElements(names="tamaño")
-	public void setTamaño(int tam)
-	{
-		this.tamaño=tam;
-	}
+	public Rueda(){}
 	
 	@Override
 	public String toString() {
-		return Double.toString(tamaño);
+		return Integer.toString(tamaño);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {		
+		return ((Rueda)obj).tamaño==this.tamaño;
 	}
 }
 
@@ -70,24 +69,31 @@ import ExtendedJSONParser.ExtendedJSONParser;
 
 public class Test {
 
-	public static void main(String[] args) throws Exception{
+	public static void main(String[] args) {
 		String json=
 		"["
 			+ "{"
 				+ "'marca':'Peugeot',"
-				+ "'modelo':'2010',"
-				+ "'descapotable':'false',"
-				+ "'ruedas':[{'tamaño':'21'},{'tamaño':'21'},{'tamaño':'20'},{'tamaño':'20'}]"					
+				+ "'modelo':405,"
+				+ "'descapotable':false,"
+				+ "'ruedas':[{'tamaño':21},{'tamaño':21},{'tamaño':20},{'tamaño':20}]"					
 			+ "}"
 		+ ","
 		+ "{"
-				+ "'marca':'Fiat',"
-				+ "'modelo':'2005',"
-				+ "'descapotable':'true',"
-				+ "'ruedas':[{'tamaño':'19'},{'tamaño':'19'},{'tamaño':'19'},{'tamaño':'19'}]"
-		+ "}]";			
+				+ "'marca':'Peugeot',"
+				+ "'modelo':607,"
+				+ "'descapotable':true,"
+				+ "'ruedas':[{'tamaño':19},{'tamaño':19},{'tamaño':19},{'tamaño':19}]"
+		+ "}]";		
 		
-		Vehiculo[] vehiculos=ExtendedJSONParser.GetObject(json, Vehiculo[].class);
-		System.out.println(Arrays.toString(vehiculos));
+		try {
+			Vehiculo[] vehiculos=ExtendedJSONParser.GetObject(json, Vehiculo[].class);
+			String generatedJson=ExtendedJSONParser.GetJSON(vehiculos);
+			Vehiculo[] vehiculosCopy=ExtendedJSONParser.GetObject(generatedJson, Vehiculo[].class);
+			
+			System.out.println(Arrays.equals(vehiculos,vehiculosCopy));
+		} catch (Exception e) {
+			System.out.println(e.toString());
+		}		
 	}
 }
