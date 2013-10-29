@@ -1,8 +1,8 @@
 package ExtendedJSONParser;
 
 import java.lang.reflect.Array;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -18,73 +18,127 @@ public class ExtendedJSONParser {
 			else
 				return (T)GetObject(objectClass, new JSONObject(json));
 		} catch (Exception e) {
-			throw new Exception("Parser internal error:" + e.getMessage());
+			throw new Exception("[json->obj] Parser internal error:" + e.getMessage());
 		}			
 	}	
 	
+	public static String GetJSON(Object instance) throws Exception
+	{
+		try {
+			if(instance.getClass().isArray())
+				return GetJSONFromArray(instance);
+			else
+				return GetJSONFromObject(instance);			
+		} catch (Exception e) {
+			throw new Exception("[obj->json] Parser internal error:" + e.getMessage());
+		}	
+	}
+	
+	private static String GetJSONFromArray(Object instance) throws Exception
+	{
+		StringBuilder json=new StringBuilder("[");
+		int instanceLength=Array.getLength(instance);
+		int i=0;
+		
+		while(true)
+		{
+			json.append(GetJSON(Array.get(instance, i++)));
+			if(i>=instanceLength) break;
+			json.append(',');
+		}
+		
+		json.append(']');		
+		return json.toString();
+	}
+	
+	private static String GetJSONFromObject(Object instance) throws Exception
+	{		
+		Class<?> instanceClass=instance.getClass();
+		if(instanceClass.isPrimitive()||instanceClass==String.class)
+			return GetPrimitiveFromJson(instance,instanceClass);
+		
+		StringBuilder json=new StringBuilder();
+		Field[] allFields = instance.getClass().getDeclaredFields();
+		
+		for (Field field : allFields) {
+			if(json.length()==0) json.append("{");
+			else	json.append(",");
+			
+	        if (!Modifier.isPrivate(field.getModifiers())) 
+	        	continue;
+	        
+	        field.setAccessible(true);	        	        	        
+	        Object value=field.get(instance);
+	        Class<?> fieldType= field.getType();	        
+	        boolean isPrimitiveType=fieldType.isPrimitive()||fieldType==String.class;
+	        
+	        json.append("'"+ field.getName()+"':");
+	        json.append(isPrimitiveType?GetPrimitiveFromJson(value,fieldType):GetJSON(value));	        
+    	}
+	
+		json.append("}");
+		return json.toString();		
+	}
+	
+	private static String GetPrimitiveFromJson(Object instance, Class<?> type) throws Exception
+	{
+		if(type.isPrimitive())
+			return GetPrimitiveJson(instance); 
+		else if(type==String.class)
+			return "'" + (String)instance + "'";
+		
+		throw new Exception("Invalid json primitve type class");		
+	}
+	
+	private static String GetPrimitiveJson(Object instance) throws Exception
+	{
+		Class<?> instanceClass=instance.getClass();
+		
+		if(instanceClass.equals(Double.class))
+			return ((Double)instance).toString();
+		if(instanceClass.equals(Integer.class))
+			return ((Integer)instance).toString(); 
+		if(instanceClass.equals(Long.class))
+			return ((Long)instance).toString(); 
+		if(instanceClass.equals(Boolean.class))
+			return ((Boolean)instance).toString();		
+		
+		throw new Exception("Invalid primitve type class");				
+	}
+	
 	private static Object GetObject(Class<?> objectClass, JSONObject json) throws Exception
 	{
-		Object result = null;
-		Constructor<?>[] constructors=objectClass.getConstructors();
-		
-		for(Constructor<?> constructor : constructors)
-		{
-			if(constructor.getAnnotation(JSONElements.class)==null)
-				continue;
-			
-			result=BuildObjectWithConstructor(constructor,json);
-			break;							
-		}
-		
-		if(result==null)
-			result=objectClass.newInstance();
-		
-		FillObjectWithMethods(result,objectClass,json);
-		
-		return result;
+		Object result = objectClass.newInstance();
+		ConfigureInstance(result,json);
+		return result ;
 	}
 	
-	private static Object BuildObjectWithConstructor(Constructor<?> constructor,  JSONObject json) throws Exception
+	private static void ConfigureInstance(Object instance, JSONObject json) throws Exception
 	{
-		String[] names=constructor.getAnnotation(JSONElements.class).names().split(",");
-		return constructor.newInstance(GetParametersFromJson(constructor.getParameterTypes(),names,json));
-	}
+		Field[] allFields = instance.getClass().getDeclaredFields();
+		for (Field field : allFields) {
+	        if (!Modifier.isPrivate(field.getModifiers()))
+	        	continue;
+	        field.setAccessible(true);
+	        field.set(instance, GetFieldFromJson(field.getType(),field.getName(),json));	        
+	    }
+	}	
 	
-	private static Object[] GetParametersFromJson(Class<?>[] parametersTypes, String[] parametersNames, JSONObject json) throws Exception
+	private static Object GetFieldFromJson(Class<?> fieldType, String fieldName, JSONObject json) throws Exception
 	{
-		Object[] parameters=new Object[parametersNames.length];
+		Object field=null;
 		
-		for(int p=0;p<parametersNames.length;p++){	
-			Class<?> patameterType=parametersTypes[p];
-			if(patameterType.isPrimitive()||patameterType==String.class)
-				parameters[p]=GetPrimitiveElement(patameterType,parametersNames[p],json);
-			else
-			{
-				if(patameterType.isArray())
-					parameters[p]=GetArrayObject(patameterType,json.getJSONArray(parametersNames[p]));
-				else
-					parameters[p]=GetObject(patameterType,json.getJSONObject(parametersNames[p]));
-			}								
-		}
-					
-		return parameters;
-	}
-	
-	private static void FillObjectWithMethods(Object object, Class<?> objectClass, JSONObject json) throws Exception	{
-		
-		for(Method method : objectClass.getMethods())
+		if(fieldType.isPrimitive()||fieldType==String.class)
+			field=GetPrimitiveElement(fieldType,fieldName,json);
+		else
 		{
-			String[] names;
-			
-			if(method.getAnnotation(JSONElements.class) != null)
-				names=method.getAnnotation(JSONElements.class).names().split(",");		
-			else if(method.getName().startsWith("set"))
-				names= new String[]{method.getName().substring(3)};
+			if(fieldType.isArray())
+				field=GetArrayObject(fieldType,json.getJSONArray(fieldName));
 			else
-				continue;
+				field=GetObject(fieldType,json.getJSONObject(fieldName));
+		}
 			
-			method.invoke(object, GetParametersFromJson(method.getParameterTypes(),names,json));						
-		}		
+		return field;
 	}
 	
 	private static Object GetArrayObject(Class<?> arrayClass, JSONArray jsonArray) throws Exception

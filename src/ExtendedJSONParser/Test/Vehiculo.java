@@ -2,8 +2,6 @@ package ExtendedJSONParser.Test;
 
 import java.util.Arrays;
 
-import ExtendedJSONParser.JSONElements;
-
 public class Vehiculo {
 
 	private String marca;
@@ -11,17 +9,19 @@ public class Vehiculo {
 	private boolean descapotable;
 	private Rueda[] ruedas;
 	
-	@JSONElements(names="marca,modelo,descapotable,ruedas")
-	public Vehiculo(String marca,int modelo,boolean descapotable,Rueda[] ruedas)
-	{
-		this.marca=marca;
-		this.modelo=modelo;
-		this.descapotable=descapotable;
-		this.ruedas=ruedas;
-	}
+	public Vehiculo(){}
 	
 	@Override
 	public String toString() {
 		return marca + " " + modelo + " " + descapotable + " " + Arrays.toString(ruedas);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		Vehiculo vehiculo=(Vehiculo)obj;
+		return vehiculo.marca.equals(this.marca) &&
+				vehiculo.modelo==this.modelo &&
+				vehiculo.descapotable==this.descapotable &&
+				Arrays.equals(vehiculo.ruedas, this.ruedas);
 	}
 }

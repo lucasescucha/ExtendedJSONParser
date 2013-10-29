@@ -2,15 +2,17 @@ package ExtendedJSONParser.Test;
 
 public class Rueda {
 
-	private double tamaño;
+	private int tamaño;
 	
-	public void settamaño(int tamaño)
-	{
-		this.tamaño=tamaño;
-	}
+	public Rueda(){}
 	
 	@Override
 	public String toString() {
-		return Double.toString(tamaño);
+		return Integer.toString(tamaño);
+	}
+	
+	@Override
+	public boolean equals(Object obj) {		
+		return ((Rueda)obj).tamaño==this.tamaño;
 	}
 }
